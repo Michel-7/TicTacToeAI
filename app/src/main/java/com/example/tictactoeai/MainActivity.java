@@ -1,6 +1,7 @@
 package com.example.tictactoeai;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Pair;
@@ -14,8 +15,12 @@ import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
-    private Button[][] buttons = new Button[3][3];
+    private final Button[][] buttons = new Button[3][3];
     private GameLogic gameLogic;
+    private View menuView;
+    private View gameView;
+    private int currentDifficulty = 0; // 0 = Easy, 1 = Hard, 2 = Expert
+    private Button buttonEasy, buttonHard, buttonExpert;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,7 +28,78 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         gameLogic = new GameLogic();
+        setupViews();
+        setupMenuButtons();
+    }
 
+    private void setupViews() {
+        // Inflate menu and game views
+        menuView = getLayoutInflater().inflate(R.layout.menu_layout, findViewById(android.R.id.content), false);
+        gameView = findViewById(R.id.gameContainer);
+
+        // Set initial visibility
+        menuView.setVisibility(View.VISIBLE);
+        gameView.setVisibility(View.GONE);
+
+        // Add menu to layout
+        setContentView(menuView);
+    }
+
+    private void setupMenuButtons() {
+        // Initialize buttons
+        buttonEasy = menuView.findViewById(R.id.buttonEasy);
+        buttonHard = menuView.findViewById(R.id.buttonHard);
+        buttonExpert = menuView.findViewById(R.id.buttonExpert);
+        Button buttonStartGame = menuView.findViewById(R.id.buttonStartGame);
+
+        // Set default selection
+        updateDifficultySelection();
+
+        // Set click listeners
+        buttonEasy.setOnClickListener(v -> {
+            currentDifficulty = 0;
+            updateDifficultySelection();
+        });
+
+        buttonHard.setOnClickListener(v -> {
+            currentDifficulty = 1;
+            updateDifficultySelection();
+        });
+
+        buttonExpert.setOnClickListener(v -> {
+            currentDifficulty = 2;
+            updateDifficultySelection();
+        });
+
+        buttonStartGame.setOnClickListener(v -> startGame());
+    }
+
+    private void updateDifficultySelection() {
+        // Reset all buttons to default style
+        buttonEasy.setBackgroundColor(ContextCompat.getColor(this, android.R.color.darker_gray));
+        buttonHard.setBackgroundColor(ContextCompat.getColor(this, android.R.color.darker_gray));
+        buttonExpert.setBackgroundColor(ContextCompat.getColor(this, android.R.color.darker_gray));
+
+        // Highlight selected button
+        switch (currentDifficulty) {
+            case 0:
+                buttonEasy.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_blue_light));
+                break;
+            case 1:
+                buttonHard.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_blue_light));
+                break;
+            case 2:
+                buttonExpert.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_blue_light));
+                break;
+        }
+    }
+
+    private void startGame() {
+        // Switch to game view
+        setContentView(R.layout.activity_main);
+        gameView = findViewById(R.id.gameContainer);
+
+        // Initialize game grid
         GridLayout gridLayout = findViewById(R.id.gridLayout);
         int index = 0;
 
@@ -32,15 +108,18 @@ public class MainActivity extends AppCompatActivity {
                 buttons[i][j] = (Button) gridLayout.getChildAt(index);
                 final int row = i;
                 final int col = j;
-                buttons[i][j].setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        playerMove(row, col);
-                    }
-                });
+                buttons[i][j].setOnClickListener(v -> playerMove(row, col));
                 index++;
             }
         }
+
+        // Setup restart button
+        Button restartButton = findViewById(R.id.buttonRestart);
+        restartButton.setOnClickListener(v -> {
+            gameLogic = new GameLogic();
+            setupViews();
+            setupMenuButtons();
+        });
     }
 
     private void playerMove(int row, int col) {
@@ -51,10 +130,22 @@ public class MainActivity extends AppCompatActivity {
             if (gameLogic.isGameOver()) {
                 showGameResult();
             } else {
-                aiMoveMiniMax();
+                // Choose AI move based on difficulty
+                switch (currentDifficulty) {
+                    case 0:
+                        aiMoveRandom();
+                        break;
+                    case 1:
+                        aiMoveMiniMax();
+                        break;
+                    case 2:
+                        aiMoveAlphaBeta();
+                        break;
+                }
             }
         }
     }
+
     private void showGameResult() {
         GameLogic.GameResults results = gameLogic.getGameResults();
 
@@ -70,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
         for (Pair<Integer, Integer> position : winningCombination) {
             int row = position.first;
             int col = position.second;
-            buttons[row][col].setBackgroundColor(getResources().getColor(android.R.color.holo_green_light));
+            buttons[row][col].setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_green_light));
         }
     }
 
@@ -113,5 +204,22 @@ public class MainActivity extends AppCompatActivity {
         }, 500);
     }
 
+    private void aiMoveAlphaBeta() {
+        new Handler().postDelayed(() -> {
+            Pair<Integer, Integer> move = gameLogic.getBestMoveAlphaBeta();
+
+            if (move != null) {
+                int row = move.first;
+                int col = move.second;
+
+                buttons[row][col].setText("X");
+                gameLogic.updateGameState(row, col);
+
+                if (gameLogic.isGameOver()) {
+                    showGameResult();
+                }
+            }
+        }, 500);
+    }
 }
 

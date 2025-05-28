@@ -147,6 +147,81 @@ public class GameLogic {
         return bestScore;
     }
 
+    /**
+     * Determines the best move for the AI using the Alpha-Beta Pruning algorithm.
+     * This is an optimization of the Minimax algorithm.
+     *
+     * @return A Pair<Integer, Integer> representing the best (row, col) move for the AI.
+     */
+    public Pair<Integer, Integer> getBestMoveAlphaBeta() {
+        int bestScore = Integer.MIN_VALUE;
+        Pair<Integer, Integer> bestMove = null;
+
+        // Alpha-beta initial values
+        int alpha = Integer.MIN_VALUE;
+        int beta = Integer.MAX_VALUE;
+
+        // Iterate through all available moves
+        for (Pair<Integer, Integer> move : getAvailableMoves()) {
+            gameState[move.first][move.second] = 'X'; // Make the AI's hypothetical move ('X' is AI)
+            // Call alphabeta for the opponent (minimizing player)
+            int score = alphabeta(false, alpha, beta);
+            gameState[move.first][move.second] = 0; // Undo the move (backtrack)
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestMove = move;
+            }
+            alpha = Math.max(alpha, bestScore); // Update alpha for the maximizing player
+        }
+        return bestMove;
+    }
+
+    /**
+     * The Alpha-Beta Pruning algorithm implementation.
+     *
+     * @param isMaximizing True if it's the maximizing player's turn (AI), false if it's the minimizing player's turn (human).
+     * @param alpha The alpha value (best score found so far for the maximizing player).
+     * @param beta The beta value (best score found so far for the minimizing player).
+     * @return The score of the current game state.
+     */
+    private int alphabeta(boolean isMaximizing, int alpha, int beta) {
+        Character result = checkWinner(); // Check if the game has ended
+        if (result != null) {
+            if (result == 'X') return 1; // AI wins
+            else if (result == 'O') return -1; // Human wins
+            else return 0; // Draw
+        }
+
+        if (isMaximizing) {
+            int bestScore = Integer.MIN_VALUE;
+            for (Pair<Integer, Integer> move : getAvailableMoves()) {
+                gameState[move.first][move.second] = 'X'; // Make hypothetical move for AI
+                bestScore = Math.max(bestScore, alphabeta(false, alpha, beta)); // Recurse for opponent
+                gameState[move.first][move.second] = 0; // Undo the move
+
+                alpha = Math.max(alpha, bestScore); // Update alpha
+                if (beta <= alpha) { // Beta cut-off
+                    break;
+                }
+            }
+            return bestScore;
+        } else { // Minimizing player (human)
+            int bestScore = Integer.MAX_VALUE;
+            for (Pair<Integer, Integer> move : getAvailableMoves()) {
+                gameState[move.first][move.second] = 'O'; // Make hypothetical move for human
+                bestScore = Math.min(bestScore, alphabeta(true, alpha, beta)); // Recurse for AI
+                gameState[move.first][move.second] = 0; // Undo the move
+
+                beta = Math.min(beta, bestScore); // Update beta
+                if (beta <= alpha) { // Alpha cut-off
+                    break;
+                }
+            }
+            return bestScore;
+        }
+    }
+
     public static class GameResults
     {
         char winner;
